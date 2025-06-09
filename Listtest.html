@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Task Checklist</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; }
+    .task { display: flex; align-items: center; margin-bottom: 10px; }
+    .task input { margin-right: 10px; }
+    #progressBar {
+      width: 100%; background: #eee; border-radius: 5px; overflow: hidden; height: 20px;
+      margin-top: 20px;
+    }
+    #progressFill {
+      height: 100%; background: #4caf50; width: 0%;
+    }
+    button { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<h2>My Task List</h2>
+
+<div id="taskList">
+  <div class="task"><input type="checkbox" id="task1"><label for="task1">Task 1</label></div>
+  <div class="task"><input type="checkbox" id="task2"><label for="task2">Task 2</label></div>
+  <div class="task"><input type="checkbox" id="task3"><label for="task3">Task 3</label></div>
+</div>
+
+<div id="progressBar"><div id="progressFill"></div></div>
+<button onclick="resetTasks()">Reset</button>
+
+<audio id="checkSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+<audio id="uncheckSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+<audio id="applauseSound" src="https://actions.google.com/sounds/v1/crowd/applause.ogg"></audio>
+
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxDlYeMYBy8u41REt4m-hKZJIantlhXENsq24mpIp58OQklZ9q3gGmCUfsSLTqo7neg/exec";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const checkboxes = document.querySelectorAll("input[type=checkbox]");
+  const checkSound = document.getElementById("checkSound");
+  const uncheckSound = document.getElementById("uncheckSound");
+  const applauseSound = document.getElementById("applauseSound");
+
+  function updateProgress() {
+    const total = checkboxes.length;
+    const checked = [...checkboxes].filter(cb => cb.checked).length;
+    document.getElementById("progressFill").style.width = `${(checked / total) * 100}%`;
+    if (checked === total) applauseSound.play();
+  }
+
+function saveState(task, status) {
+  fetch(WEB_APP_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ task, status })
+  })
+  .then(r => r.text())
+  .then(console.log)
+  .catch(console.error);
+}
+
+  checkboxes.forEach(cb => {
+    cb.addEventListener("change", () => {
+      const label = cb.nextElementSibling.innerText;
+      if (cb.checked) {
+        checkSound.play();
+        saveState(label, "Checked");
+      } else {
+        uncheckSound.play();
+        saveState(label, "Unchecked");
+      }
+      updateProgress();
+    });
+  });
+
+function loadState() {
+  fetch(WEB_APP_URL, { method: "GET", mode: "cors" })
+    .then(r => r.json())
+    .then(data => {
+      document.querySelectorAll("input[type=checkbox]").forEach(cb => {
+        const label = cb.nextElementSibling.innerText;
+        cb.checked = !!data[label];
+      });
+      updateProgress();
+    })
+    .catch(console.error);
+}
+
+  loadState();
+});
+
+function resetTasks() {
+  const checkboxes = document.querySelectorAll("input[type=checkbox]");
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      cb.checked = false;
+      cb.dispatchEvent(new Event('change'));
+    }
+  });
+}
+</script>
+
+</body>
+</html>
